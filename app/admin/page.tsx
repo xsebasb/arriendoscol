@@ -14,7 +14,11 @@ import {
   XCircle,
   Lock,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Edit3,
+  Image as ImageIcon,
+  Save,
+  X
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -28,6 +32,11 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [submittingLogin, setSubmittingLogin] = useState(false);
+
+  // Edit Modals State
+  const [editingItem, setEditingItem] = useState<{ type: 'VIVIENDA' | 'REFUGIO'; data: any } | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -90,7 +99,7 @@ export default function AdminPage() {
     }
   };
 
-  // Handlers for Vivienda/Refugio Status & Delete
+  // Vivienda Actions
   const handlePropertyStatus = async (id: string, newStatus: string) => {
     try {
       const res = await fetch(`/api/properties/${id}`, {
@@ -104,6 +113,28 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteProperty = async (id: string) => {
+    if (!confirm('¿Eliminar vivienda permanentemente junto con todas sus imágenes?')) return;
+    try {
+      const res = await fetch(`/api/properties/${id}`, { method: 'DELETE' });
+      if (res.ok) loadAdminData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Refugio Actions
+  const handleDeleteShelter = async (id: string) => {
+    if (!confirm('¿Eliminar refugio de emergencia permanentemente?')) return;
+    try {
+      const res = await fetch(`/api/shelters/${id}`, { method: 'DELETE' });
+      if (res.ok) loadAdminData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Notice Actions
   const handleNoticeStatus = async (id: string, newStatus: string) => {
     try {
       const res = await fetch(`/api/notices/${id}`, {
@@ -127,6 +158,7 @@ export default function AdminPage() {
     }
   };
 
+  // Search Actions
   const handleDeleteSearch = async (id: string) => {
     if (!confirm('¿Eliminar solicitud de búsqueda permanentemente?')) return;
     try {
@@ -134,6 +166,52 @@ export default function AdminPage() {
       if (res.ok) loadAdminData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Image Delete Action
+  const handleDeleteImage = async (imageId: string, imageType: 'PROPERTY' | 'SHELTER') => {
+    if (!confirm('¿Eliminar esta imagen específica de la publicación?')) return;
+    try {
+      const res = await fetch(`/api/admin/images/${imageId}?type=${imageType}`, { method: 'DELETE' });
+      if (res.ok) {
+        // Update local editing modal state
+        setEditFormData((prev: any) => ({
+          ...prev,
+          images: prev.images.filter((img: any) => img.id !== imageId),
+        }));
+        loadAdminData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Save Edit Handler
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    setSavingEdit(true);
+    try {
+      const endpoint = editingItem.type === 'VIVIENDA' ? `/api/properties/${editingItem.data.id}` : `/api/shelters/${editingItem.data.id}`;
+      const method = editingItem.type === 'VIVIENDA' ? 'PATCH' : 'PUT';
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (res.ok) {
+        setEditingItem(null);
+        loadAdminData();
+      } else {
+        alert('Error al guardar los cambios');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error en el servidor');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -208,7 +286,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-black text-white">Panel de Administración Integral</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Supervisa, edita estado, aprueba avisos callejeros y gestiona solicitudes de búsqueda de arriendos.
+            Supervisa, edita texto, modera imágenes individuales y elimina publicaciones de viviendas, refugios, avisos y búsquedas.
           </p>
         </div>
         <button
@@ -298,14 +376,12 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* Tab Navigation Content */}
-
       {/* TAB 1: VIVIENDAS */}
       {activeTab === 'viviendas' && (
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
           <h3 className="text-lg font-bold text-white flex items-center space-x-2">
             <Building2 className="w-5 h-5 text-emerald-400" />
-            <span>Gestión de Viviendas Publicadas</span>
+            <span>Gestión de Viviendas (Edición, Imágenes & Borrado)</span>
           </h3>
 
           <div className="overflow-x-auto">
@@ -315,8 +391,8 @@ export default function AdminPage() {
                   <th className="p-3">Título / Dirección</th>
                   <th className="p-3">Ubicación</th>
                   <th className="p-3">Precio</th>
-                  <th className="p-3">Estado Actual</th>
-                  <th className="p-3 text-right">Acciones de Edición</th>
+                  <th className="p-3">Estado</th>
+                  <th className="p-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
@@ -339,22 +415,31 @@ export default function AdminPage() {
                         {p.status}
                       </span>
                     </td>
-                    <td className="p-3 text-right space-x-2">
-                      <a
-                        href={`/viviendas/${p.id}`}
-                        target="_blank"
-                        className="inline-flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-medium"
+                    <td className="p-3 text-right space-x-1.5">
+                      <button
+                        onClick={() => {
+                          setEditingItem({ type: 'VIVIENDA', data: p });
+                          setEditFormData(p);
+                        }}
+                        className="inline-flex items-center space-x-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white px-2.5 py-1 rounded-lg text-[11px] font-medium border border-emerald-500/30 transition"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Ver</span>
-                      </a>
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
                       <button
                         onClick={() =>
                           handlePropertyStatus(p.id, p.status === 'DISPONIBLE' ? 'ARRENDADO' : 'DISPONIBLE')
                         }
                         className="inline-flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-amber-300 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-amber-500/30"
                       >
-                        <span>Cambiar a {p.status === 'DISPONIBLE' ? 'ARRENDADO' : 'DISPONIBLE'}</span>
+                        <span>{p.status === 'DISPONIBLE' ? 'Arrendado' : 'Disponible'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProperty(p.id)}
+                        className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-lg transition"
+                        title="Eliminar Vivienda"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -370,7 +455,7 @@ export default function AdminPage() {
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
           <h3 className="text-lg font-bold text-white flex items-center space-x-2">
             <ShieldAlert className="w-5 h-5 text-rose-400" />
-            <span>Gestión de Refugios de Emergencia</span>
+            <span>Gestión de Refugios (Edición, Imágenes & Borrado)</span>
           </h3>
 
           <div className="overflow-x-auto">
@@ -381,7 +466,7 @@ export default function AdminPage() {
                   <th className="p-3">Ubicación</th>
                   <th className="p-3">Capacidad Disp.</th>
                   <th className="p-3">Teléfono</th>
-                  <th className="p-3 text-right">Ver Ficha</th>
+                  <th className="p-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
@@ -391,15 +476,24 @@ export default function AdminPage() {
                     <td className="p-3">{s.municipality}, {s.department}</td>
                     <td className="p-3 font-bold text-emerald-400">{s.availableCapacity} / {s.totalCapacity}</td>
                     <td className="p-3 text-slate-400">{s.phone}</td>
-                    <td className="p-3 text-right">
-                      <a
-                        href={`/refugios/${s.id}`}
-                        target="_blank"
-                        className="inline-flex items-center space-x-1 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-medium"
+                    <td className="p-3 text-right space-x-1.5">
+                      <button
+                        onClick={() => {
+                          setEditingItem({ type: 'REFUGIO', data: s });
+                          setEditFormData(s);
+                        }}
+                        className="inline-flex items-center space-x-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white px-2.5 py-1 rounded-lg text-[11px] font-medium border border-rose-500/30 transition"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Ver Ficha</span>
-                      </a>
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteShelter(s.id)}
+                        className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-lg transition"
+                        title="Eliminar Refugio"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -414,7 +508,7 @@ export default function AdminPage() {
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
           <h3 className="text-lg font-bold text-white flex items-center space-x-2">
             <Camera className="w-5 h-5 text-amber-400" />
-            <span>Avisos de Arriendo en la Calle (Moderación & Aprobar)</span>
+            <span>Avisos de Arriendo en la Calle (Moderación & Borrado)</span>
           </h3>
 
           {data?.notices?.length === 0 ? (
@@ -484,7 +578,7 @@ export default function AdminPage() {
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
           <h3 className="text-lg font-bold text-white flex items-center space-x-2">
             <Search className="w-5 h-5 text-cyan-400" />
-            <span>Personas Buscando Arriendo (Anuncios de Solicitud)</span>
+            <span>Personas Buscando Arriendo (Gestión & Borrado)</span>
           </h3>
 
           {data?.searches?.length === 0 ? (
@@ -578,6 +672,164 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MODAL FOR VIVIENDAS AND REFUGIOS */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-2">
+                <Edit3 className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-lg font-bold text-white">
+                  Editar {editingItem.type === 'VIVIENDA' ? 'Vivienda' : 'Refugio'}: {editFormData.title || editFormData.name}
+                </h3>
+              </div>
+              <button onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Editable Images Gallery (MODERACIÓN DE FOTOS INDIVIDUALES) */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-300 flex items-center space-x-1">
+                <ImageIcon className="w-4 h-4 text-cyan-400" />
+                <span>Imágenes asociadas (Eliminar fotos incorrectas)</span>
+              </label>
+              {editFormData.images?.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">No hay imágenes asociadas.</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                  {editFormData.images?.map((img: any) => (
+                    <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden bg-slate-900 border border-slate-800">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`data:${img.mimeType};base64,${img.base64}`}
+                        alt="Imagen publicación"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteImage(img.id, editingItem.type === 'VIVIENDA' ? 'PROPERTY' : 'SHELTER')}
+                        className="absolute top-1.5 right-1.5 bg-rose-600 text-white p-1 rounded-lg opacity-90 hover:opacity-100 transition shadow-lg"
+                        title="Eliminar solo esta imagen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Editable Fields Form */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">
+                  {editingItem.type === 'VIVIENDA' ? 'Título' : 'Nombre del Refugio'}
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.type === 'VIVIENDA' ? editFormData.title || '' : editFormData.name || ''}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      [editingItem.type === 'VIVIENDA' ? 'title' : 'name']: e.target.value,
+                    })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              {editingItem.type === 'VIVIENDA' ? (
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Precio ($ COP)</label>
+                  <input
+                    type="number"
+                    value={editFormData.price || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Capacidad Disponible / Total</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      placeholder="Disponible"
+                      value={editFormData.availableCapacity || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, availableCapacity: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Total"
+                      value={editFormData.totalCapacity || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, totalCapacity: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Dirección</label>
+                <input
+                  type="text"
+                  value={editFormData.address || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Teléfono de Contacto</label>
+                <input
+                  type="text"
+                  value={editingItem.type === 'VIVIENDA' ? editFormData.contactPhone || '' : editFormData.phone || ''}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      [editingItem.type === 'VIVIENDA' ? 'contactPhone' : 'phone']: e.target.value,
+                    })
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-slate-400 font-semibold mb-1">Descripción</label>
+                <textarea
+                  rows={3}
+                  value={editFormData.description || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={savingEdit}
+                onClick={handleSaveEdit}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-lg shadow-emerald-950/40"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -29,11 +29,11 @@ export async function GET() {
       prisma.rentalSearch.count(),
       prisma.property.findMany({
         orderBy: { createdAt: 'desc' },
-        include: { images: { take: 1 } },
+        include: { images: true },
       }),
       prisma.shelter.findMany({
         orderBy: { createdAt: 'desc' },
-        include: { images: { take: 1 } },
+        include: { images: true },
       }),
       prisma.streetNotice.findMany({
         orderBy: { createdAt: 'desc' },
