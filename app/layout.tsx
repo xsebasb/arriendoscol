@@ -6,6 +6,11 @@ import Footer from '@/components/Footer';
 export const metadata: Metadata = {
   title: 'ArriendosCol — Viviendas y refugios disponibles',
   description: 'Encuentra y publica viviendas disponibles en arriendo y refugios habilitados en zonas prioritarias de Colombia.',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   openGraph: {
     title: 'ArriendosCol — Viviendas y refugios disponibles',
     description: 'Encuentra viviendas disponibles y refugios habilitados en Colombia.',
