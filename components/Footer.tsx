@@ -18,6 +18,18 @@ export default function Footer() {
             <p className="text-xs text-slate-400 leading-relaxed">
               Plataforma colombiana directa para conectar personas con viviendas disponibles en arriendo y refugios habilitados en zonas prioritarias de emergencia.
             </p>
+            <div className="pt-2 border-t border-slate-800/80">
+              <span className="text-[11px] text-slate-400 block font-semibold">Soporte y Solicitud de Modificaciones:</span>
+              <a
+                href="https://wa.me/573002870245?text=Hola,%20necesito%20soporte%20o%20modificar%20una%20publicaci%C3%B3n%20en%20ArriendosCol"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center space-x-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-bold mt-1 group"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>+57 300 287 0245 (WhatsApp)</span>
+              </a>
+            </div>
           </div>
 
           {/* Quick links */}
