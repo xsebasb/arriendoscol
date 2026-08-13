@@ -175,7 +175,6 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/admin/images/${imageId}?type=${imageType}`, { method: 'DELETE' });
       if (res.ok) {
-        // Update local editing modal state
         setEditFormData((prev: any) => ({
           ...prev,
           images: prev.images.filter((img: any) => img.id !== imageId),
@@ -185,6 +184,76 @@ export default function AdminPage() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Image Add Action from Admin Modal
+  const handleAddAdminImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !editingItem) return;
+
+    const file = files[0];
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        const base64Data = compressedDataUrl.split(',')[1];
+
+        try {
+          const res = await fetch('/api/admin/images', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetId: editingItem.data.id,
+              targetType: editingItem.type === 'VIVIENDA' ? 'PROPERTY' : 'SHELTER',
+              base64: base64Data,
+              mimeType: 'image/jpeg',
+            }),
+          });
+
+          if (res.ok) {
+            const newImage = await res.json();
+            setEditFormData((prev: any) => ({
+              ...prev,
+              images: [...(prev.images || []), newImage],
+            }));
+            loadAdminData();
+          } else {
+            alert('Error al agregar la imagen');
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+    };
+
+    reader.readAsDataURL(file);
   };
 
   // Save Edit Handler
@@ -692,14 +761,28 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Editable Images Gallery (MODERACIÓN DE FOTOS INDIVIDUALES) */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-300 flex items-center space-x-1">
-                <ImageIcon className="w-4 h-4 text-cyan-400" />
-                <span>Imágenes asociadas (Eliminar fotos incorrectas)</span>
-              </label>
+            {/* Editable Images Gallery (MODERACIÓN Y ADICIÓN DE FOTOS INDIVIDUALES) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-300 flex items-center space-x-1">
+                  <ImageIcon className="w-4 h-4 text-cyan-400" />
+                  <span>Imágenes asociadas</span>
+                </label>
+                <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center space-x-1 shadow">
+                  <span>+ Agregar foto</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAddAdminImage}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
               {editFormData.images?.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">No hay imágenes asociadas.</p>
+                <p className="text-xs text-slate-500 italic bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                  No hay imágenes asociadas a esta publicación. ¡Haz clic en "+ Agregar foto" para subir una!
+                </p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
                   {editFormData.images?.map((img: any) => (
