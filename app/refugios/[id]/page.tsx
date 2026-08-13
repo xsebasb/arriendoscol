@@ -156,10 +156,30 @@ export default function DetalleRefugioPage() {
 
           {/* Map Location */}
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center space-x-2">
-              <MapPin className="w-5 h-5 text-rose-400" />
-              <span>Ubicación en Mapa</span>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-rose-400" />
+                <span>Ubicación en Mapa</span>
+              </h3>
+              <div className="flex items-center space-x-2">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${shelter.latitude},${shelter.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center space-x-1 shadow"
+                >
+                  <span>🗺️ Abrir Google Maps</span>
+                </a>
+                <a
+                  href={`https://waze.com/ul?ll=${shelter.latitude},${shelter.longitude}&navigate=yes`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center space-x-1 shadow"
+                >
+                  <span>🚗 Abrir Waze</span>
+                </a>
+              </div>
+            </div>
             <div className="h-80">
               <LeafletMap
                 center={[shelter.latitude, shelter.longitude]}

@@ -131,13 +131,28 @@ export default function LeafletMapClient({
         ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(m.price)
         : '';
 
+      const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}`;
+      const wazeUrl = `https://waze.com/ul?ll=${m.lat},${m.lng}&navigate=yes`;
+
       const popupContent = `
-        <div style="font-family: system-ui, sans-serif; padding: 4px; max-width: 200px;">
-          ${m.image ? `<img src="${m.image}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />` : ''}
+        <div style="font-family: system-ui, sans-serif; padding: 4px; max-width: 220px;">
+          ${m.image ? `<img src="${m.image}" style="width: 100%; height: 95px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />` : ''}
           <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #0f172a;">${m.title}</h4>
           <p style="margin: 2px 0; font-size: 12px; color: #475569;">📍 ${m.city}</p>
           ${priceFormatted ? `<p style="margin: 2px 0; font-size: 13px; font-weight: 700; color: #16a34a;">${priceFormatted}/mes</p>` : ''}
-          <a href="${m.link}" style="display: inline-block; margin-top: 6px; padding: 4px 10px; background-color: #0284c7; color: white; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 600;">Ver detalles</a>
+          
+          <div style="display: flex; gap: 4px; margin-top: 8px; align-items: center; flex-wrap: wrap;">
+            <a href="${m.link}" style="flex: 1; text-center: center; padding: 5px 8px; background-color: #0284c7; color: white; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 600; text-align: center;">Ver detalles</a>
+          </div>
+
+          <div style="display: flex; gap: 4px; margin-top: 6px;">
+            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="flex: 1; padding: 4px 6px; background-color: #4285F4; color: white; border-radius: 6px; text-decoration: none; font-size: 10px; font-weight: 600; text-align: center; display: flex; items-center; justify-content: center; gap: 3px;">
+              🗺️ Google Maps
+            </a>
+            <a href="${wazeUrl}" target="_blank" rel="noopener noreferrer" style="flex: 1; padding: 4px 6px; background-color: #33CCFF; color: #0f172a; border-radius: 6px; text-decoration: none; font-size: 10px; font-weight: 700; text-align: center; display: flex; items-center; justify-content: center; gap: 3px;">
+              🚗 Waze
+            </a>
+          </div>
         </div>
       `;
 
