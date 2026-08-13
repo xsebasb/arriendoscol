@@ -1,0 +1,142 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PropertyType {
+  CASA
+  APARTAMENTO
+  HABITACION
+  APARTAESTUDIO
+}
+
+enum PropertyStatus {
+  DISPONIBLE
+  ARRENDADO
+  OCULTO
+  PENDIENTE_APROBACION
+}
+
+enum ShelterStatus {
+  HABILITADO
+  LLENO
+  CERRADO
+  TEMPORALMENTE_CERRADO
+}
+
+enum NoticeStatus {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+model Property {
+  id           String         @id @default(uuid())
+  title        String
+  description  String
+  type         PropertyType   @default(APARTAMENTO)
+  price        Float
+  bedrooms     Int            @default(1)
+  bathrooms    Int            @default(1)
+  area         Float          @default(0)
+  department   String
+  municipality String
+  neighborhood String
+  address      String
+  latitude     Float
+  longitude    Float
+  contactName  String
+  contactPhone String
+  contactEmail String
+  status       PropertyStatus @default(DISPONIBLE)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  images       PropertyImage[]
+  reports      Report[]
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  mimeType   String
+  base64     String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Shelter {
+  id                String        @id @default(uuid())
+  name              String
+  description       String
+  department        String
+  municipality      String
+  neighborhood      String
+  address           String
+  totalCapacity     Int
+  availableCapacity Int
+  services          String        // Guardado como texto separado por comas
+  phone             String
+  email             String?
+  status            ShelterStatus @default(HABILITADO)
+  latitude          Float
+  longitude         Float
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  images            ShelterImage[]
+  reports           Report[]
+}
+
+model ShelterImage {
+  id        String   @id @default(uuid())
+  shelterId String
+  shelter   Shelter  @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+  mimeType  String
+  base64    String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model StreetNotice {
+  id           String       @id @default(uuid())
+  municipality String
+  neighborhood String
+  description  String?
+  mimeType     String
+  base64       String
+  status       NoticeStatus @default(PENDIENTE)
+  createdAt    DateTime     @default(now())
+}
+
+model RentalSearch {
+  id               String       @id @default(uuid())
+  title            String
+  municipality     String
+  type             PropertyType @default(APARTAMENTO)
+  neighborhood     String?
+  stratum          String?
+  bedroomsNeeded   Int          @default(1)
+  budget           Float
+  needsParking     Boolean      @default(false)
+  description      String
+  contactName      String
+  contactPhone     String
+  createdAt        DateTime     @default(now())
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  reason      String    // Información falsa, Ubicación incorrecta, Precio incorrecto, Duplicada, Contenido inapropiado, Otro
+  details     String?
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  shelterId   String?
+  shelter     Shelter?  @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+}
