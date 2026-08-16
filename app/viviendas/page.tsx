@@ -19,10 +19,18 @@ export default function ViviendasPage() {
   const [bathrooms, setBathrooms] = useState('');
   const [sort, setSort] = useState('recent');
 
-  const fetchProperties = async () => {
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<{ total: number; totalPages: number; limit: number }>({
+    total: 0,
+    totalPages: 1,
+    limit: 12,
+  });
+
+  const fetchProperties = async (targetPage = page) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.append('page', targetPage.toString());
       if (department) params.append('department', department);
       if (municipality) params.append('municipality', municipality);
       if (type) params.append('type', type);
@@ -35,6 +43,9 @@ export default function ViviendasPage() {
       const res = await fetch(`/api/properties?${params.toString()}`);
       const data = await res.json();
       setProperties(data.data || []);
+      if (data.meta) {
+        setMeta(data.meta);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,8 +54,16 @@ export default function ViviendasPage() {
   };
 
   useEffect(() => {
-    fetchProperties();
+    setPage(1);
+    fetchProperties(1);
   }, [department, municipality, type, sort]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > meta.totalPages) return;
+    setPage(newPage);
+    fetchProperties(newPage);
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
 
   const availableMunicipalities = department ? getMunicipalitiesByDepartment(department) : [];
 
@@ -57,16 +76,24 @@ export default function ViviendasPage() {
     setBedrooms('');
     setBathrooms('');
     setSort('recent');
+    setPage(1);
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-black text-white">Viviendas disponibles para arriendo</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Encuentra opciones habitacionales verificadas en todo el territorio colombiano.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-white">Viviendas disponibles para arriendo</h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Encuentra opciones habitacionales verificadas en todo el territorio colombiano.
+          </p>
+        </div>
+        {meta.total > 0 && (
+          <span className="self-start sm:self-auto bg-slate-900 border border-slate-800 text-emerald-400 text-xs font-bold px-3.5 py-1.5 rounded-full">
+            {meta.total} publicaciones en total
+          </span>
+        )}
       </div>
 
       {/* Filters Bar */}
@@ -189,7 +216,10 @@ export default function ViviendasPage() {
           </div>
           <div className="flex items-end">
             <button
-              onClick={fetchProperties}
+              onClick={() => {
+                setPage(1);
+                fetchProperties(1);
+              }}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1"
             >
               <Search className="w-3.5 h-3.5" />
@@ -217,10 +247,64 @@ export default function ViviendasPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((p) => (
-            <PropertyCard key={p.id} property={p} />
-          ))}
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((p) => (
+              <PropertyCard key={p.id} property={p} />
+            ))}
+          </div>
+
+          {/* Pagination Bar */}
+          {meta.totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-800">
+              <span className="text-xs text-slate-400">
+                Página <strong className="text-white">{page}</strong> de <strong className="text-white">{meta.totalPages}</strong> ({meta.total} resultados)
+              </span>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Anterior
+                </button>
+
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
+                    .filter((pNum) => pNum === 1 || pNum === meta.totalPages || Math.abs(pNum - page) <= 2)
+                    .map((pNum, idx, arr) => {
+                      const prev = arr[idx - 1];
+                      const showEllipsis = prev && pNum - prev > 1;
+
+                      return (
+                        <React.Fragment key={pNum}>
+                          {showEllipsis && <span className="text-xs text-slate-600 px-1">...</span>}
+                          <button
+                            onClick={() => handlePageChange(pNum)}
+                            className={`w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center ${
+                              page === pNum
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
+                                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {pNum}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === meta.totalPages}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -25,11 +25,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     ? `data:${primaryImg.mimeType};base64,${primaryImg.base64}`
     : 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80';
 
-  const priceFormatted = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    maximumFractionDigits: 0,
-  }).format(property.price);
+  const priceFormatted = property.price !== null && property.price !== undefined
+    ? new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0,
+      }).format(property.price)
+    : 'Por consultar';
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-950/20 transition duration-300 flex flex-col group">
@@ -47,7 +49,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         </span>
         <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
           <span className="text-xl font-black text-white drop-shadow-md">
-            {priceFormatted} <span className="text-xs font-normal text-slate-300">/mes</span>
+            {priceFormatted} {property.price ? <span className="text-xs font-normal text-slate-300">/mes</span> : null}
           </span>
         </div>
       </div>
@@ -58,7 +60,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <div className="flex items-center space-x-1 text-xs text-slate-400">
             <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="truncate">
-              {property.neighborhood}, {property.municipality} ({property.department})
+              {property.neighborhood || 'Cali'}, {property.municipality} ({property.department})
             </span>
           </div>
           <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition line-clamp-1">
@@ -75,15 +77,15 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-800/80 text-xs text-slate-300">
           <div className="flex items-center space-x-1.5">
             <Bed className="w-4 h-4 text-emerald-400" />
-            <span>{property.bedrooms} Hab</span>
+            <span>{property.bedrooms !== null && property.bedrooms !== undefined ? `${property.bedrooms} Hab` : 'N/I'}</span>
           </div>
           <div className="flex items-center space-x-1.5">
             <Bath className="w-4 h-4 text-emerald-400" />
-            <span>{property.bathrooms} Baños</span>
+            <span>{property.bathrooms !== null && property.bathrooms !== undefined ? `${property.bathrooms} Baños` : 'N/I'}</span>
           </div>
           <div className="flex items-center space-x-1.5">
             <Maximize2 className="w-4 h-4 text-emerald-400" />
-            <span>{property.area} m²</span>
+            <span>{property.area ? `${property.area} m²` : 'N/I'}</span>
           </div>
         </div>
 
